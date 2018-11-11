@@ -83,6 +83,9 @@ private:
 		"SpineShldr", "HandTipL", "ThumbL", "HandTipR", "ThumbR", "Count" };*/
 	map<int, vec4>					mJoints;
 	// Fluid
+	ci::vec2						mPrevPos;
+	ci::Colorf						mColor;
+
 	std::map<int, ci::Colorf>		mTouchColors;
 	float							mVelScale;
 	float							mDenScale;
@@ -192,6 +195,7 @@ void KinectFluidApp::update()
 {
 	mSDASession->setFloatUniformValueByIndex(mSDASettings->IFPS, getAverageFps());
 	mSDASession->update();
+	mFluid2D.step();
 }
 void KinectFluidApp::cleanup()
 {
@@ -207,29 +211,33 @@ void KinectFluidApp::cleanup()
 }
 void KinectFluidApp::mouseMove(MouseEvent event)
 {
-	if (!mSDASession->handleMouseMove(event)) {
-		// let your application perform its mouseMove handling here
-	}
+	
 }
 void KinectFluidApp::mouseDown(MouseEvent event)
 {
-	if (!mSDASession->handleMouseDown(event)) {
-		// let your application perform its mouseDown handling here
-		if (event.isRightDown()) { 
-		}
-	}
+	mPrevPos = event.getPos();
+	mColor.r = Rand::randFloat();
+	mColor.g = Rand::randFloat();
+	mColor.b = Rand::randFloat();
 }
 void KinectFluidApp::mouseDrag(MouseEvent event)
 {
-	if (!mSDASession->handleMouseDrag(event)) {
-		// let your application perform its mouseDrag handling here
-	}	
+	float x = (event.getX() / (float)getWindowWidth())*mFluid2D.resX();
+	float y = (event.getY() / (float)getWindowHeight())*mFluid2D.resY();
+
+	if (event.isLeftDown()) {
+		vec2 dv = vec2(event.getPos()) - mPrevPos;
+		mFluid2D.splatVelocity(x, y, mVelScale*dv);
+		mFluid2D.splatRgb(x, y, mRgbScale*mColor);
+		if (mFluid2D.isBuoyancyEnabled()) {
+			mFluid2D.splatDensity(x, y, mDenScale);
+		}
+	}
+	mPrevPos = event.getPos();
 }
 void KinectFluidApp::mouseUp(MouseEvent event)
 {
-	if (!mSDASession->handleMouseUp(event)) {
-		// let your application perform its mouseUp handling here
-	}
+	
 }
 
 void KinectFluidApp::keyDown(KeyEvent event)
@@ -250,8 +258,7 @@ void KinectFluidApp::keyDown(KeyEvent event)
 }
 void KinectFluidApp::keyUp(KeyEvent event)
 {
-	if (!mSDASession->handleKeyUp(event)) {
-	}
+	
 }
 void KinectFluidApp::touchesBegan(TouchEvent event)
 {
@@ -295,7 +302,7 @@ void KinectFluidApp::touchesEnded(TouchEvent event)
 void KinectFluidApp::draw()
 {
 	gl::clear(Color::black());
-	if (mFadeInDelay) {
+	/*if (mFadeInDelay) {
 		mSDASettings->iAlpha = 0.0f;
 		if (getElapsedFrames() > mSDASession->getFadeInDelay()) {
 			mFadeInDelay = false;
@@ -303,11 +310,11 @@ void KinectFluidApp::draw()
 		}
 	}
 
-	gl::setMatricesWindow(mSDASettings->mRenderWidth, mSDASettings->mRenderHeight, false);
+	gl::setMatricesWindow(getWindowWidth(), getWindowHeight(), false);
 	for (unsigned i = 0; i < mJoints.size(); ++i)
 	{
 		gl::drawSolidCircle(mJoints[i], 10);
-	}
+	}	*/
 	float* data = const_cast<float*>((float*)mFluid2D.rgb().data());
 	Surface32f surf(data, mFluid2D.resX(), mFluid2D.resY(), mFluid2D.resX() * sizeof(Colorf), SurfaceChannelOrder::RGB);
 
@@ -320,6 +327,7 @@ void KinectFluidApp::draw()
 	gl::draw(mTex, getWindowBounds());
 	// Spout Send
 	mSpoutOut.sendViewport();
+
 	getWindow()->setTitle(mSDASettings->sFps + " KinectFluid");
 }
 
@@ -330,7 +338,7 @@ void prepareSettings(App::Settings *settings)
 #endif
 	settings->setMultiTouchEnabled();
 
-	settings->setWindowSize(640, 480);
+	settings->setWindowSize(854, 480);
 }
 
 CINDER_APP(KinectFluidApp, RendererGl, prepareSettings)
