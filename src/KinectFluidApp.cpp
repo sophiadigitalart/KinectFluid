@@ -32,9 +32,10 @@ using protocol = asio::ip::udp;
 const uint16_t localPort = 7000;
 struct Joints
 {
-	string		name;	
+	string		name;
 	vec2		mPos;
 	vec2		mPrevPos;
+	bool		isActive;
 };
 class KinectFluidApp : public App {
 
@@ -67,7 +68,8 @@ private:
 	float							backcolor[4];
 	int								playheadPositions[12];
 	int								speeds[12];
-
+	int								xPos, yPos;
+	int								imW, imH;
 	float							f = 0.0f;
 	char							buf[64];
 	unsigned int					i, j;
@@ -87,6 +89,8 @@ private:
 	std::map<uint64_t, protocol::endpoint> mConnections;
 	// kinect
 	map<int, Joints>					mJoints;
+	void		toggleActive(int jointIndex) { mJoints[jointIndex].isActive = !mJoints[jointIndex].isActive; };
+
 	// Fluid
 	ci::vec2						mPrevPos;
 	ci::Colorf						mColor;
@@ -140,15 +144,17 @@ KinectFluidApp::KinectFluidApp()
 	mJoints[22].name = "ThumbL";
 	mJoints[23].name = "HandTipR";
 	mJoints[24].name = "ThumbR";
-	mJoints[25].name = "Count";
+
 	for (unsigned i = 0; i < mJoints.size(); i++)
 	{
 		mJoints[i].mPrevPos.x = 10;
 		mJoints[i].mPrevPos.y = 10;
 		mJoints[i].mPos.x = 200;
 		mJoints[i].mPos.y = 200;
+		mJoints[i].isActive = false;
 	}
- 
+	mJoints[7].isActive = true;
+	mJoints[11].isActive = true;
 
 	// OSC
 	// ? is body 0 to 5 
@@ -160,18 +166,18 @@ KinectFluidApp::KinectFluidApp()
 		int jointIndex = message[3].int32() + 200;
 		int bodyIndex = message[4].int32();
 		string jointName = message[5].string();
-		stringstream sParams;
-		sParams << "{\"k2\" :[{\"name\":\"" << toString(jointIndex) << "\",\"value\":\"" << toString(x) << "," << toString(y) << "," << toString(z) << "," << toString(bodyIndex) << "\"}]}";
-		mSDASession->wsWrite(sParams.str());
-		mJoints[message[3].int32()].mPos.x = (x + 1.0) * mFluid2D.resX();
+		//stringstream sParams;
+		//sParams << "{\"k2\" :[{\"name\":\"" << toString(jointIndex) << "\",\"value\":\"" << toString(x) << "," << toString(y) << "," << toString(z) << "," << toString(bodyIndex) << "\"}]}";
+		// mSDASession->wsWrite(sParams.str());
+		mJoints[message[3].int32()].mPos.x = (x + 2.0) * mFluid2D.resX();
 		mJoints[message[3].int32()].mPos.y = (y + 1.0) * mFluid2D.resY();
-		sParams << " jx " << toString(mJoints[message[3].int32()].mPos.x) << " jy " << toString(mJoints[message[3].int32()].mPos.y);
+		//sParams << " jx " << toString(mJoints[message[3].int32()].mPos.x) << " jy " << toString(mJoints[message[3].int32()].mPos.y);
 
 		//if (jointIndex == 211) 
-			CI_LOG_W(sParams.str());
-	
+			//CI_LOG_W(sParams.str());
+
 	});
-	
+
 	try {
 		// Bind the receiver to the endpoint. This function may throw.
 		mReceiver.bind();
@@ -209,6 +215,8 @@ KinectFluidApp::KinectFluidApp()
 	mVelScale = 3.0f*std::max(mFluid2D.resX(), mFluid2D.resY());
 
 	// windows
+	imW = 80;
+	imH = 80;
 	mIsShutDown = false;
 	mRenderWindowTimer = 0.0f;
 	//timeline().apply(&mRenderWindowTimer, 1.0f, 2.0f).finishFn([&] { positionRenderWindow(); });
@@ -217,7 +225,7 @@ KinectFluidApp::KinectFluidApp()
 void KinectFluidApp::resize() {
 	mIsResizing = true;
 	// disconnect ui window and io events callbacks
-	ImGui::disconnectWindow(getWindow());
+	//ImGui::disconnectWindow(getWindow());
 }
 void KinectFluidApp::positionRenderWindow() {
 	mSDASettings->mRenderPosXY = ivec2(mSDASettings->mRenderX, mSDASettings->mRenderY);//20141214 was 0
@@ -245,20 +253,23 @@ void KinectFluidApp::update()
 	mSDASession->update();
 	for (unsigned i = 0; i < mJoints.size(); i++)
 	{
-		Colorf color;
-		color.r = Rand::randFloat();
-		color.g = Rand::randFloat();
-		color.b = Rand::randFloat();
-		float x = (mJoints[i].mPos.x / (float)getWindowWidth())*mFluid2D.resX();
-		float y = (mJoints[i].mPos.y / (float)getWindowHeight())*mFluid2D.resY();
-		vec2 dv = mJoints[i].mPos - mJoints[i].mPrevPos;
-		mFluid2D.splatVelocity(x, y, mVelScale*dv);
-		mFluid2D.splatRgb(x, y, mRgbScale*color);
-		if (mFluid2D.isBuoyancyEnabled()) {
-			mFluid2D.splatDensity(x, y, mDenScale);
+		if (mJoints[i].isActive) {
+			Colorf color;
+			color.r = Rand::randFloat();
+			color.g = Rand::randFloat();
+			color.b = Rand::randFloat();
+			float x = (mJoints[i].mPos.x / (float)getWindowWidth())*mFluid2D.resX();
+			float y = (mJoints[i].mPos.y / (float)getWindowHeight())*mFluid2D.resY();
+			vec2 dv = mJoints[i].mPos - mJoints[i].mPrevPos;
+			mFluid2D.splatVelocity(x, y, mVelScale*dv);
+			mFluid2D.splatRgb(x, y, mRgbScale*color);
+			if (mFluid2D.isBuoyancyEnabled()) {
+				mFluid2D.splatDensity(x, y, mDenScale);
+			}
+			mJoints[i].mPrevPos.x = mJoints[i].mPos.x;
+			mJoints[i].mPrevPos.y = mJoints[i].mPos.y;
 		}
-		mJoints[i].mPrevPos.x = mJoints[i].mPos.x;
-		mJoints[i].mPrevPos.y = mJoints[i].mPos.y;
+
 	}
 	mFluid2D.step();
 }
@@ -269,6 +280,8 @@ void KinectFluidApp::cleanup()
 		mIsShutDown = true;
 		CI_LOG_V("shutdown");
 		// save settings
+		ui::disconnectWindow(getWindow());
+		ui::Shutdown();
 		mSDASettings->save();
 		mSDASession->save();
 		quit();
@@ -276,7 +289,7 @@ void KinectFluidApp::cleanup()
 }
 void KinectFluidApp::mouseMove(MouseEvent event)
 {
-	
+
 }
 void KinectFluidApp::mouseDown(MouseEvent event)
 {
@@ -302,7 +315,7 @@ void KinectFluidApp::mouseDrag(MouseEvent event)
 }
 void KinectFluidApp::mouseUp(MouseEvent event)
 {
-	
+
 }
 
 void KinectFluidApp::keyDown(KeyEvent event)
@@ -323,7 +336,7 @@ void KinectFluidApp::keyDown(KeyEvent event)
 }
 void KinectFluidApp::keyUp(KeyEvent event)
 {
-	
+
 }
 void KinectFluidApp::touchesBegan(TouchEvent event)
 {
@@ -367,15 +380,8 @@ void KinectFluidApp::touchesEnded(TouchEvent event)
 void KinectFluidApp::draw()
 {
 	gl::clear(Color::black());
-	/*
-
 	gl::setMatricesWindow(getWindowWidth(), getWindowHeight(), false);
-	for (unsigned i = 0; i < mJoints.size(); ++i)
-	{
-		gl::drawSolidCircle(mJoints[i], 10);
-	}	*/
-	
-	/**/
+	// gl::setMatricesWindow(toPixels(getWindowSize()));
 	float* data = const_cast<float*>((float*)mFluid2D.rgb().data());
 	Surface32f surf(data, mFluid2D.resX(), mFluid2D.resY(), mFluid2D.resX() * sizeof(Colorf), SurfaceChannelOrder::RGB);
 
@@ -386,19 +392,16 @@ void KinectFluidApp::draw()
 		mTex->update(surf);
 	}
 	gl::draw(mTex, getWindowBounds());
-	for (unsigned i = 0; i < mJoints.size(); i++)
-	{
-		gl::drawSolidCircle(vec2(mJoints[i].mPos.x, mJoints[i].mPos.y), 10);
-	}
+
 	// Spout Send
 	mSpoutOut.sendViewport();
 
 	ImGuiStyle& style = ImGui::GetStyle();
+	if (mSDASettings->mCursorVisible) {
+		//if (mIsResizing) {
+		//	mIsResizing = false;
 
-	//if (mIsResizing) {
-	//	mIsResizing = false;
-
-		// set ui window and io events callbacks 
+			// set ui window and io events callbacks 
 		ImGui::connectWindow(getWindow());
 		ImGui::initialize();
 
@@ -448,18 +451,52 @@ void KinectFluidApp::draw()
 		style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.8f, 0.35f, 0.35f, 1.00f);
 		style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.24f, 0.24f, 0.24f, 1.00f);
 #pragma endregion style
-		ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiSetCond_Once);
-		ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiSetCond_Once);
-		sprintf(buf, "KinectFluid Fps %c %d###fps", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], (double)getAverageFps());
-		ImGui::Begin(buf);
+
+		xPos = mSDASettings->uiMargin;
+		yPos = 20;
+		//sprintf(buf, "KinectFluid %c %d###fps", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3], mJoints.size());
+		for (unsigned i = 0; i < mJoints.size() - 1; i++)
 		{
-			ImGui::SliderFloat("hlx", &mJoints[7].mPos.x, 0.00f, 300.0f);
-			ImGui::SliderFloat("hly", &mJoints[7].mPos.y, 0.00f, 300.0f);
-			ImGui::SliderFloat("hrx", &mJoints[11].mPos.x, 0.00f, 300.0f);
-			ImGui::SliderFloat("hry", &mJoints[11].mPos.y, 0.00f, 300.0f);
+
+			ImGui::SetNextWindowSize(ImVec2(imW, imH));//, ImGuiSetCond_Once
+			ImGui::SetNextWindowPos(ImVec2(xPos, yPos));//, ImGuiSetCond_Once
+
+			//gl::drawSolidCircle(vec2(mJoints[i].mPos.x, mJoints[i].mPos.y), 10);
+			sprintf(buf, "%s##s%d", mJoints[i].name.c_str(), i);
+			//			ImGui::Begin(buf);
+			ImGui::Begin(buf, NULL, ImVec2(imW, imH), ImGui::GetStyle().Alpha, ImGuiWindowFlags_NoSavedSettings);
+			{
+				ImGui::PushItemWidth(imW - 40);
+				ImGui::PushID(i);
+				sprintf(buf, "jx##jnx%d", i);
+				if (ImGui::SliderFloat(buf, &mJoints[i].mPos.x, 0.00f, 600.0f)) {}
+				sprintf(buf, "jy##jny%d", i);
+				if (ImGui::SliderFloat(buf, &mJoints[i].mPos.y, 0.00f, 600.0f)) {}
+
+				mJoints[i].isActive ? ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f / 7.0f, 1.0f, 0.5f)) : ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 0.1f, 0.1f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f / 7.0f, 0.7f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(1.0f / 7.0f, 0.8f, 0.8f));
+				sprintf(buf, "active##ac%d", i);
+				if (ImGui::Button(buf)) {
+					toggleActive(i);
+				}
+				ImGui::PopStyleColor(3);
+
+
+				ImGui::PopID();
+				ImGui::PopItemWidth();
+			}
+			ImGui::End();
+
+			if (xPos > getWindowWidth()) {
+				xPos = mSDASettings->uiMargin;
+				yPos += mSDASettings->uiMargin + imH;
+			}
+			else {
+				xPos += mSDASettings->uiMargin + imW;
+			}
 		}
-		ImGui::End();
-	//}
+	}
 	getWindow()->setTitle(mSDASettings->sFps + " KinectFluid");
 }
 
