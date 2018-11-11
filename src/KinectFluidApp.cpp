@@ -16,6 +16,7 @@
 #include "CiSpoutOut.h"
 // Fluid
 #include "cinderfx/Fluid2D.h"
+
 using namespace ci;
 using namespace ci::app;
 using namespace std;
@@ -36,6 +37,9 @@ public:
 	void mouseUp(MouseEvent event) override;
 	void keyDown(KeyEvent event) override;
 	void keyUp(KeyEvent event) override;
+	void touchesBegan(ci::app::TouchEvent event);
+	void touchesMoved(ci::app::TouchEvent event);
+	void touchesEnded(ci::app::TouchEvent event);
 	void fileDrop(FileDropEvent event) override;
 	void update() override;
 	void draw() override;
@@ -78,6 +82,14 @@ private:
 		"HipR", "KneeR", "AnkleR", "FootR",
 		"SpineShldr", "HandTipL", "ThumbL", "HandTipR", "ThumbR", "Count" };*/
 	map<int, vec4>					mJoints;
+	// Fluid
+	std::map<int, ci::Colorf>		mTouchColors;
+	float							mVelScale;
+	float							mDenScale;
+	float							mRgbScale;
+	cinderfx::Fluid2D				mFluid2D;
+	ci::gl::Texture2dRef			mTex;
+
 };
 
 
@@ -134,6 +146,22 @@ KinectFluidApp::KinectFluidApp()
 		else
 			return true;
 	});
+
+	// Fluid
+	glEnable(GL_TEXTURE_2D);
+
+	mFluid2D.enableDensity();
+	mFluid2D.enableRgb();
+	mFluid2D.enableVorticityConfinement();
+
+	mDenScale = 50;
+	mRgbScale = 50;
+
+	mFluid2D.set(192, 192);
+	mFluid2D.setDensityDissipation(0.99f);
+	mFluid2D.setRgbDissipation(0.99f);
+	mVelScale = 3.0f*std::max(mFluid2D.resX(), mFluid2D.resY());
+
 	// windows
 	mIsShutDown = false;
 	mRenderWindowTimer = 0.0f;
@@ -225,6 +253,44 @@ void KinectFluidApp::keyUp(KeyEvent event)
 	if (!mSDASession->handleKeyUp(event)) {
 	}
 }
+void KinectFluidApp::touchesBegan(TouchEvent event)
+{
+	const std::vector<TouchEvent::Touch>& touches = event.getTouches();
+	for (std::vector<TouchEvent::Touch>::const_iterator cit = touches.begin(); cit != touches.end(); ++cit) {
+		Colorf color;
+		color.r = Rand::randFloat();
+		color.g = Rand::randFloat();
+		color.b = Rand::randFloat();
+		mTouchColors[cit->getId()] = color;
+	}
+}
+
+void KinectFluidApp::touchesMoved(TouchEvent event)
+{
+	const std::vector<TouchEvent::Touch>& touches = event.getTouches();
+	for (std::vector<TouchEvent::Touch>::const_iterator cit = touches.begin(); cit != touches.end(); ++cit) {
+		if (mTouchColors.find(cit->getId()) == mTouchColors.end())
+			continue;
+		vec2 prevPos = cit->getPrevPos();
+		vec2 pos = cit->getPos();
+		float x = (pos.x / (float)getWindowWidth())*mFluid2D.resX();
+		float y = (pos.y / (float)getWindowHeight())*mFluid2D.resY();
+		vec2 dv = pos - prevPos;
+		mFluid2D.splatVelocity(x, y, mVelScale*dv);
+		mFluid2D.splatRgb(x, y, mRgbScale*mTouchColors[cit->getId()]);
+		if (mFluid2D.isBuoyancyEnabled()) {
+			mFluid2D.splatDensity(x, y, mDenScale);
+		}
+	}
+}
+
+void KinectFluidApp::touchesEnded(TouchEvent event)
+{
+	const std::vector<TouchEvent::Touch>& touches = event.getTouches();
+	for (std::vector<TouchEvent::Touch>::const_iterator cit = touches.begin(); cit != touches.end(); ++cit) {
+		mTouchColors.erase(cit->getId());
+	}
+}
 
 void KinectFluidApp::draw()
 {
@@ -242,7 +308,16 @@ void KinectFluidApp::draw()
 	{
 		gl::drawSolidCircle(mJoints[i], 10);
 	}
+	float* data = const_cast<float*>((float*)mFluid2D.rgb().data());
+	Surface32f surf(data, mFluid2D.resX(), mFluid2D.resY(), mFluid2D.resX() * sizeof(Colorf), SurfaceChannelOrder::RGB);
 
+	if (!mTex) {
+		mTex = gl::Texture::create(surf);
+	}
+	else {
+		mTex->update(surf);
+	}
+	gl::draw(mTex, getWindowBounds());
 	// Spout Send
 	mSpoutOut.sendViewport();
 	getWindow()->setTitle(mSDASettings->sFps + " KinectFluid");
@@ -250,6 +325,11 @@ void KinectFluidApp::draw()
 
 void prepareSettings(App::Settings *settings)
 {
+#if defined( CINDER_MSW )
+	//settings->setConsoleWindowEnabled();
+#endif
+	settings->setMultiTouchEnabled();
+
 	settings->setWindowSize(640, 480);
 }
 
