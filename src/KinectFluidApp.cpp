@@ -458,7 +458,7 @@ void KinectFluidApp::draw()
 		for (unsigned i = 0; i < mJoints.size() - 1; i++)
 		{
 
-			ImGui::SetNextWindowSize(ImVec2(imW, imH));//, ImGuiSetCond_Once
+			ImGui::SetNextWindowSize(ImVec2(30, imH));//, ImGuiSetCond_Once
 			ImGui::SetNextWindowPos(ImVec2(xPos, yPos));//, ImGuiSetCond_Once
 
 			//gl::drawSolidCircle(vec2(mJoints[i].mPos.x, mJoints[i].mPos.y), 10);
