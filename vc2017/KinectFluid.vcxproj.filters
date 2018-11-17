@@ -179,9 +179,6 @@
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDALog.h">
       <Filter>Blocks\Cinder-SDA\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDAMix.h">
-      <Filter>Blocks\Cinder-SDA\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDARouter.h">
       <Filter>Blocks\Cinder-SDA\include</Filter>
     </ClInclude>
@@ -216,9 +213,6 @@
       <Filter>Blocks\Cinder-SDA\src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDALog.cpp">
-      <Filter>Blocks\Cinder-SDA\src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDAMix.cpp">
       <Filter>Blocks\Cinder-SDA\src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDARouter.cpp">

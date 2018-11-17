@@ -231,7 +231,6 @@
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDAAnimation.h" />
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDAFbo.h" />
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDALog.h" />
-    <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDAMix.h" />
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDARouter.h" />
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDASession.h" />
     <ClInclude Include="..\..\..\Cinder\blocks\Cinder-SDA\include\SDASettings.h" />
@@ -263,7 +262,6 @@
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDAAnimation.cpp" />
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDAFbo.cpp" />
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDALog.cpp" />
-    <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDAMix.cpp" />
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDARouter.cpp" />
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDASession.cpp" />
     <ClCompile Include="..\..\..\Cinder\blocks\Cinder-SDA\src\SDASettings.cpp" />
