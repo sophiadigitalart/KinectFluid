@@ -7,11 +7,11 @@
 #include <list>
 #include "cinder/osc/Osc.h"
 // Settings
-#include "SDASettings.h"
+#include "VDSettings.h"
 // Session
-#include "SDASession.h"
+#include "VDSession.h"
 // Log
-#include "SDALog.h"
+#include "VDLog.h"
 // Spout
 #include "CiSpoutOut.h"
 // Fluid
@@ -24,7 +24,7 @@
 using namespace ci;
 using namespace ci::app;
 using namespace std;
-using namespace SophiaDigitalArt;
+using namespace VideoDromm;
 
 using Receiver = osc::ReceiverUdp;
 using protocol = asio::ip::udp;
@@ -58,11 +58,11 @@ public:
 	void setUIVisibility(bool visible);
 private:
 	// Settings
-	SDASettingsRef					mSDASettings;
+	VDSettingsRef					mSDASettings;
 	// Session
-	SDASessionRef					mSDASession;
+	VDSessionRef					mSDASession;
 	// Log
-	SDALogRef						mSDALog;
+	VDLogRef						mSDALog;
 	// imgui
 	float							color[4];
 	float							backcolor[4];
@@ -110,9 +110,9 @@ KinectFluidApp::KinectFluidApp()
 	mReceiver(localPort)
 {
 	// Settings
-	mSDASettings = SDASettings::create();
+	mSDASettings = VDSettings::create("KinectFluid");
 	// Session
-	mSDASession = SDASession::create(mSDASettings);
+	mSDASession = VDSession::create(mSDASettings);
 	//mSDASettings->mCursorVisible = true;
 	setUIVisibility(mSDASettings->mCursorVisible);
 	mSDASession->getWindowsResolution();
